@@ -1,0 +1,15 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Model weights and checkpoints
+*.ckpt
+*.safetensors
+*.bin
+
+# Temporary files
+*.log
+.DS_Store
