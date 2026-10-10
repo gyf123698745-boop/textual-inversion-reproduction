@@ -15,14 +15,21 @@ from pathlib import Path
 import torch.nn.functional as F
 
 # Reference images
-REFERENCE_DIR = Path(
-    r"C:\Users\G\Desktop\diffusers\examples\textual_inversion\cat"
-)
+import argparse
 
-# Generated images
-GENERATED_DIR = Path(
-    r"C:\Users\G\Desktop\paper representation\results\prompt_editing"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--reference_dir",
+    type=Path,
+    required=True,
+    help="Directory containing the six reference images",
 )
+args = parser.parse_args()
+
+REFERENCE_DIR = args.reference_dir
+GENERATED_DIR = PROJECT_ROOT / "results" / "prompt_editing"
 
 # Only evaluate individual generated images, not comparison grids
 generated_files = sorted(
