@@ -1,340 +1,129 @@
 # Textual Inversion Reproduction — Experiment Log
 
-## Project Overview
+## 1. Project Overview and Environment
 
-**Original Paper:** An Image is Worth One Word: Personalizing Text-to-Image Generation using Textual Inversion
+**Paper:** Gal et al., *An Image is Worth One Word: Personalizing Text-to-Image Generation using Textual Inversion* (2022).
 
-**Objective:** Reproduce Textual Inversion using Stable Diffusion 1.5 and investigate how learning rate and training steps affect concept fidelity and editability.
+**Objective:** Reproduce Textual Inversion with Stable Diffusion 1.5 and explore concept fidelity and prompt-based editability across two learning-rate configurations and training checkpoints.
 
-**Status:** Initial reproduction and exploratory comparison completed.
+**Hardware:** NVIDIA RTX 5060 Laptop GPU (8 GB VRAM), 16 GB RAM, Windows 11.
 
----
+**Software:** Python 3.12.9; PyTorch 2.14.1+cu132; Diffusers 0.41.0.dev0; Transformers 5.19.0; Accelerate 1.15.0.
 
-## 1. Experimental Environment
+**Model/data:** Stable Diffusion 1.5; `diffusers/cat_toy_example` (six reference images); placeholder token `<cat-toy>` initialized from `toy`; learnable property `object`.
 
-### Hardware
-- GPU: NVIDIA GeForce RTX 5060 Laptop GPU (8 GB VRAM)
-- System RAM: 16 GB
-- Operating System: Windows 11
-
-### Software
-- Python: 3.12.9
-- PyTorch: 2.14.1+cu132
-- Diffusers: 0.41.0.dev0
-- Transformers: 5.19.0
-- Accelerate: 1.15.0
-
-### Model and Dataset
-- Pretrained model: Stable Diffusion 1.5
-- Dataset: `diffusers/cat_toy_example`
-- Number of training images: 6
-- Placeholder token: `<cat-toy>`
-- Initializer token: `toy`
-- Learnable property: `object`
-
-The pretrained diffusion model was frozen during training.
-Only the embedding associated with the placeholder token was optimized.
-
----
+The pretrained diffusion model was frozen during training. The new placeholder-token embedding was optimized. Full training commands are documented in [`training_config.md`](training_config.md).
 
 ## 2. Experiment 01 — Baseline Training
 
-### Objective
-
-Train a Textual Inversion embedding for a specific cat toy using a pretrained Stable Diffusion model.
-
-### Training Configuration
+**Objective:** Learn a token embedding for the specific cat toy.
 
 | Parameter | Value |
 |---|---|
-| Pretrained Model | Stable Diffusion 1.5 |
-| Training Steps | 3000 |
-| Batch Size | 1 |
-| Gradient Accumulation Steps | 4 |
-| Effective Batch Size | 4 |
-| Configured Learning Rate | 0.0005 |
-| Effective Learning Rate | 0.002 |
-| Learning Rate Scheduler | Constant |
+| Training steps | 3000 |
+| Batch size / gradient accumulation | 1 / 4 |
+| Effective batch size | 4 |
+| Configured LR / effective LR | 0.0005 / 0.002 |
+| LR scheduler | Constant |
 | Resolution | 512 × 512 |
-| Gradient Checkpointing | Enabled |
-| Initializer Token | toy |
+| Gradient checkpointing | Enabled |
+| Initializer token | `toy` |
 
-The effective learning rate was scaled by the training script using the `--scale_lr` option.
+The effective learning rate reflects `--scale_lr`. Training completed successfully; embeddings were saved at steps 500, 1000, 1500, 2000, 2500, and 3000, including the final `.safetensors` embedding.
 
-### Results
-
-- Training completed successfully after 3000 steps.
-- The learned embedding was saved as a `.safetensors` file.
-- Intermediate embeddings were saved at steps 500, 1000, 1500, 2000, 2500, and 3000.
-
-### Output Directory
-
-`textual_inversion_cat_3000/`
-
----
+**Local output directory:** `textual_inversion_cat_3000/`.
 
 ## 3. Experiment 02 — Initial Generation Test
 
-### Objective
+**Objective:** Check whether the learned embedding works in a new prompt.
 
-Verify whether the learned embedding can be used to generate images with a new text prompt.
+**Setup:** Baseline 3000-step embedding; prompt `A <cat-toy> backpack`; 50 inference steps.
 
-### Inference Configuration
-
-- Model: Stable Diffusion 1.5
-- Embedding: Baseline, 3000 steps
-- Prompt: `A <cat-toy> backpack`
-- Inference Steps: 50
-
-### Observations
-
-The generated image retained some visual characteristics of the target cat toy.
-
-However, the backpack concept was not clearly represented.
-
-### Preliminary Interpretation
-
-The embedding appeared to capture some features of the target concept, but this single image was insufficient to evaluate editability.
-
-### Limitations
-
-Only one image was generated in this initial test.
-
----
+**Observation:** The image retained some recognizable toy characteristics, but the backpack concept was not clearly represented. A single generated image cannot establish editability.
 
 ## 4. Experiment 03 — Lower Learning Rate Training
 
-### Objective
+**Objective:** Explore a lower configured learning rate while retaining the main training settings.
 
-Investigate the effect of reducing the learning rate while keeping the main training configuration unchanged.
+| Parameter | Baseline | Lower LR |
+|---|---:|---:|
+| Configured LR | 0.0005 | 0.0001 |
+| Effective LR (`--scale_lr`) | 0.002 | 0.0004 |
+| Training steps | 3000 | 3000 |
+| Effective batch size | 4 | 4 |
+| Dataset / model | Cat toy / SD 1.5 | Cat toy / SD 1.5 |
 
-### Modification
+Training completed successfully and intermediate and final embeddings were saved.
 
-| Parameter | Baseline | Experiment 03 |
-|---|---|---|
-| Configured Learning Rate | 0.0005 | 0.0001 |
-| Effective Learning Rate | 0.002 | 0.0004 |
-| Training Steps | 3000 | 3000 |
-| Effective Batch Size | 4 | 4 |
-| Dataset | Cat Toy | Cat Toy |
-| Pretrained Model | SD 1.5 | SD 1.5 |
+**Local output directory:** `textual_inversion_cat_lr0001_3000/`.
 
-### Results
+## 5. Experiment 04 — Learning Rate × Checkpoint Comparison
 
-- Training completed successfully after 3000 steps.
-- Intermediate embeddings were saved for comparison.
-- The final embedding was saved successfully.
+**Objective:** Explore how learning rate and training progress relate to concept fidelity and editability.
 
-### Output Directory
+**Design:** Two completed training runs, each evaluated at six checkpoints (500, 1000, 1500, 2000, 2500, 3000 steps). This gives **12 checkpoint conditions, not 12 independent training runs**.
 
-`textual_inversion_cat_lr0001_3000/`
-
----
-
-## 5. Experiment 04 — Learning Rate × Training Steps Comparison
-
-### Objective
-
-Compare the effects of learning rate and training steps on concept fidelity and editability.
-
-### Experimental Design
-
-Two learning rates and six training checkpoints were evaluated.
-
-| Learning Rate / Steps | 500 | 1000 | 1500 | 2000 | 2500 | 3000 |
-|---|---|---|---|---|---|---|
-| 0.002 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 0.0004 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-This resulted in 12 experimental conditions.
-
-### Evaluation Prompts
+**Prompts:**
 
 1. `A photo of <cat-toy>`
 2. `A <cat-toy> backpack`
 3. `An oil painting of <cat-toy>`
 
-Each condition was evaluated using all three prompts.
+**Inference:** 30 steps; CFG 7.5; seed 42; 512 × 512. Total: 36 generated images.
 
-Total generated images: 36.
+**Figures:** [`Photo.png`](../results/checkpoint_comparison/Photo.png), [`Backpack.png`](../results/checkpoint_comparison/Backpack.png), [`Oil_painting.png`](../results/checkpoint_comparison/Oil_painting.png).
 
-### Inference Configuration
+**Observations:** Both configurations generated recognizable features of the cat toy, including its blue-gray head, pointed ears, and colorful striped body. Details such as the curved tail and facial features were inconsistent. The backpack prompt often failed to produce a clear backpack, and the oil-painting style was inconsistent. A higher LR appeared to preserve the target concept more consistently in some samples, but the limited comparisons do not support a general conclusion.
 
-- Base Model: Stable Diffusion 1.5
-- Inference Steps: 30
-- Guidance Scale: 7.5
-- Random Seed: 42
-- Image Resolution: 512 × 512
+**Safety-checker note:** At least one image was replaced by a black image after a safety-checker warning; this should be marked as filtered/invalid rather than scored as a generation-quality failure.
 
-The same inference settings and random seed were used across all conditions.
+## 6. Experiment 05 — Prompt Editing Evaluation
 
-### Generated Figures
+**Objective:** Test scene, style, and attribute editing with the final 3000-step embeddings.
 
-- `Photo.png`
-- `Backpack.png`
-- `Oil_painting.png`
+**Design:** Two effective learning rates (0.002 and 0.0004), three prompts, six generated images. The same pretrained model and inference settings were used (30 steps, CFG 7.5, seed 42, 512 × 512).
 
-### Qualitative Observations
+| Editing type | Prompt | Observation |
+|---|---|---|
+| Scene | `A photo of <cat-toy> on a beach` | Beach environments appeared, but stripes and curved tail were not always preserved. |
+| Style | `A watercolor painting of <cat-toy>` | Watercolor style appeared, with some loss of object structure and facial detail. |
+| Attribute | `A photo of <cat-toy> wearing a small red hat` | Neither image clearly satisfied the red-hat request; one red accessory was ambiguous. |
 
-**Concept Fidelity**
+**Figures:** [`results/prompt_editing/`](../results/prompt_editing/).
 
-Both learning rates produced images containing recognizable characteristics of the original cat toy.
+**Interpretation:** Some scene and style edits were possible in these examples, while the tested attribute edit was less successful. No consistent overall advantage for either LR was established.
 
-The generated images often preserved:
-- Blue-gray cat head
-- Pointed ears
-- Colorful striped body
+## 7. Experiment 06 — CLIP Image Similarity Evaluation
 
-However, some distinctive details, particularly the curved tail and facial features, were not consistently reproduced.
+**Objective:** Provide an auxiliary quantitative comparison of generated images against the six reference images.
 
-The higher learning rate appeared to preserve the target concept more consistently in some samples, but this observation requires further evaluation.
+**Evaluation model:** `openai/clip-vit-base-patch32`.
 
-**Editability**
+**Method:** For each of the six images from Experiment 05, extract a CLIP image embedding and compute its mean cosine similarity against the six reference-image embeddings. Embeddings are normalized before similarity calculation. The images use the 3000-step checkpoints and Experiment 05 inference settings.
 
-The backpack prompt often produced images resembling the original toy rather than clearly identifiable backpacks.
-
-The oil painting prompt did not consistently produce an obvious painting style.
-
-These observations suggest that the tested prompts did not consistently produce the intended edits.
-
-However, prompt ambiguity and other factors prevent a definitive conclusion about the learned embedding's editability.
-
-**Safety Checker**
-
-At least one generated image was replaced with a black image following a safety-checker warning.
-
-This sample should be marked as safety-filtered rather than treated as a generation-quality failure.
-
----
-
-## 6. Limitations
-
-The current evaluation has several limitations:
-
-1. Only one inference random seed was used.
-2. The two training runs did not use a strictly controlled common training seed.
-3. Evaluation was primarily qualitative.
-4. No quantitative fidelity or text-alignment metrics were calculated.
-5. Some evaluation prompts were ambiguous.
-6. Checkpoints from the same training run are not independent training replicates.
-
-Therefore, the results should be interpreted as exploratory observations rather than statistically established conclusions.
-
----
-
-## 7. Experiment 05 — Improved Prompt Evaluation
-
-### Objective
-
-Evaluate the editability of the learned cat-toy concept using
-scene, style, and attribute editing prompts.
-
-### Experimental Setup
-
-Two embeddings trained for 3000 steps were compared:
-
-- Effective learning rate: 0.002
-- Effective learning rate: 0.0004
-
-The same pretrained model and inference settings were used.
-
-### Evaluation Prompts
-
-1. Scene editing: A photo of <cat-toy> on a beach
-2. Style editing: A watercolor painting of <cat-toy>
-3. Attribute editing: A photo of <cat-toy> wearing a small red hat
-
-A total of six images were generated.
-
-### Results
-
-**Scene Editing**
-
-Both embeddings successfully generated beach environments.
-
-However, several distinctive features of the original cat toy,
-including its colorful vertical stripes and curved tail,
-were not consistently preserved.
-
-**Style Editing**
-
-Both embeddings produced recognizable watercolor-style images.
-
-The learned concept was partially preserved, although facial
-features and object structure differed from the reference images.
-
-**Attribute Editing**
-
-Neither embedding clearly satisfied the instruction to place
-a small red hat on the cat toy.
-
-The lower-learning-rate result contained a red accessory,
-but its relationship to the requested hat was ambiguous.
-
-### Discussion
-
-The results suggest that the learned embeddings can respond
-to some scene and style modifications.
-
-Attribute editing was less successful in the tested examples.
-
-No consistent overall advantage of either learning rate
-was established from these six images.
-
-### Limitations
-
-The evaluation used only one random seed and three prompts.
-Additional prompts and seeds are required for more reliable conclusions.
-
-### Status
-
-Completed.
-
----
-
-## 8. Preliminary Conclusion
-
-The Textual Inversion reproduction successfully learned a new token embedding representing a specific cat toy.
-
-The initial experiments demonstrate that the learned embedding can reproduce several recognizable visual features of the target concept.
-
-A preliminary comparison across two learning rates and six training checkpoints has been completed.
-
-Further evaluation is required to determine how learning rate and training duration affect the tradeoff between concept fidelity and editability.
-
-## Experiment 06: CLIP Image Similarity Evaluation
-
-### Objective
-Quantitatively compare the visual similarity between generated images
-and the six reference images using CLIP image embeddings.
-
-### Setup
-- Model: openai/clip-vit-base-patch32
-- Reference images: 6
-- Generated images: 6
-- Training checkpoint: 3000 steps
-- Effective learning rates: 0.002 and 0.0004
-- Prompts: Beach, Red hat, Watercolor
-- Metric: Mean cosine similarity between each generated image embedding
-  and the six reference image embeddings.
-
-### Results
-
-| Prompt | LR = 0.0004 | LR = 0.002 |
+| Prompt | Effective LR = 0.0004 | Effective LR = 0.002 |
 |---|---:|---:|
 | Beach | 0.6882 | 0.7686 |
 | Red hat | 0.7459 | 0.7422 |
 | Watercolor | 0.7298 | 0.7045 |
-| Average | 0.7213 | 0.7384 |
+| **Mean** | **0.7213** | **0.7384** |
 
-### Observations
-The higher learning rate achieved a slightly higher average CLIP image
-similarity across the three prompts. However, the lower learning rate
-performed better on the Red hat and Watercolor prompts.
+**Observations:** The 0.002 embedding had a slightly higher three-prompt mean, mainly due to the beach result. The 0.0004 embedding scored higher on the other two prompts. These scores describe similarity in CLIP image-feature space, **not** prompt adherence, editability, or overall quality.
 
-### Limitations
-CLIP image similarity measures visual feature similarity rather than
-prompt adherence or overall generation quality. Only one inference seed
-was evaluated, and the two training runs did not use a controlled
-common training seed. Therefore, these results are exploratory and do
-not establish that either learning rate is generally superior.
+**Script:** [`scripts/evaluate_clip.py`](../scripts/evaluate_clip.py).
+
+## 8. Overall Limitations
+
+- Only two training runs were completed, without a controlled common training seed; LR is therefore confounded with training randomness.
+- All comparisons used a single inference seed and a small number of prompts; results are exploratory rather than statistically established.
+- The six checkpoints within each run are correlated snapshots, not independent replications.
+- Some prompts are ambiguous; visual judgments are qualitative and may be subjective.
+- CLIP image similarity measures feature-space proximity to reference images and cannot independently establish concept fidelity or prompt compliance.
+- Safety-filtered black images are invalid for visual-quality comparison.
+- The repository does not include pretrained model weights or learned embedding files; local paths in scripts need adaptation for other machines.
+
+## 9. Preliminary Conclusion
+
+The reproduction successfully trained a new token embedding for a specific cat toy using a frozen Stable Diffusion 1.5 model. Generated images exhibited recognizable features of the reference object, while prompt-based editing was uneven, particularly for the backpack and red-hat prompts.
+
+Comparisons across two learning-rate settings and six checkpoints, together with CLIP image-similarity measurements, provide exploratory evidence about fidelity and editability in this setup. They do not establish a general learning-rate optimum or a causal effect of learning rate. Further controlled seeds, prompts, and complementary prompt-alignment metrics would be required for stronger conclusions.
