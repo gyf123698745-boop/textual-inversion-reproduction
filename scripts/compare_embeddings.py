@@ -103,7 +103,7 @@ for prompt_name, prompt in PROMPTS.items():
 
             print(f"Completed: {prompt_name}, {experiment_name}, {step}")
 
-    output_path = OUTPUT, f"{prompt_name}.png"
+    output_path = OUTPUT / f"{prompt_name}.png"
     canvas.save(output_path, format="PNG")
     print(f"Saved: {output_path}")
 
