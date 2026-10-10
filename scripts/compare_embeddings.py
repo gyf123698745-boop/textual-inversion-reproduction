@@ -8,9 +8,21 @@ from diffusers import StableDiffusionPipeline
 MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
 TOKEN = "<cat-toy>"
 
+from pathlib import Path
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--embeddings_dir",
+    type=Path,
+    required=True,
+    help="Directory containing the two training output folders",
+)
+args = parser.parse_args()
+
 EXPERIMENTS = [
-    ("LR 0.002", "textual_inversion_cat_3000"),
-    ("LR 0.0004", "textual_inversion_cat_lr0001_3000"),
+    ("LR 0.002", str(args.embeddings_dir / "textual_inversion_cat_3000")),
+    ("LR 0.0004", str(args.embeddings_dir / "textual_inversion_cat_lr0001_3000")),
 ]
 
 STEPS = [3000]
@@ -21,8 +33,9 @@ PROMPTS = {
     "Red_hat": "A photo of <cat-toy> wearing a small red hat",
 }
 
-OUTPUT = "comparison_05_results"
-os.makedirs(OUTPUT, exist_ok=True)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT = PROJECT_ROOT / "results" / "prompt_editing"
+OUTPUT.mkdir(parents=True, exist_ok=True)
 
 pipe = StableDiffusionPipeline.from_pretrained(
     MODEL,
@@ -76,7 +89,7 @@ for prompt_name, prompt in PROMPTS.items():
                     guidance_scale=7.5,
                     generator=generator,
                 ).images[0]
-                image.save(f"{OUTPUT}/{prompt_name}_{experiment_name}_{step}.png")
+                image.save(OUTPUT/f"{prompt_name}_{experiment_name}_{step}.png")
 
             x = col * 512
             y = row * 550
@@ -90,8 +103,9 @@ for prompt_name, prompt in PROMPTS.items():
 
             print(f"Completed: {prompt_name}, {experiment_name}, {step}")
 
-    output_path = os.path.join(OUTPUT, f"{prompt_name}.png")
+    output_path = (OUTPUT, f"{prompt_name}.png")
     canvas.save(output_path, format="PNG")
     print(f"Saved: {output_path}")
 
 print("All comparisons finished!")
+
