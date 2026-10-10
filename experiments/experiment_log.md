@@ -222,23 +222,73 @@ Therefore, the results should be interpreted as exploratory observations rather 
 
 ---
 
-## 7. Planned Next Experiments
+## 7. Experiment 05 — Improved Prompt Evaluation
 
-### Experiment 05 — Improved Prompt Evaluation
+### Objective
 
-**Objective:** Evaluate the editability of the learned concept using clearer prompts.
+Evaluate the editability of the learned cat-toy concept using
+scene, style, and attribute editing prompts.
 
-**Planned Prompts:**
+### Experimental Setup
 
-- `A photo of <cat-toy> on a beach`
-- `A watercolor painting of <cat-toy>`
-- `A photo of <cat-toy> wearing a small red hat`
+Two embeddings trained for 3000 steps were compared:
 
-**Planned Comparison:**
+- Effective learning rate: 0.002
+- Effective learning rate: 0.0004
 
-Compare the two final 3000-step embeddings under identical inference settings.
+The same pretrained model and inference settings were used.
 
-**Status:** Not started.
+### Evaluation Prompts
+
+1. Scene editing: A photo of <cat-toy> on a beach
+2. Style editing: A watercolor painting of <cat-toy>
+3. Attribute editing: A photo of <cat-toy> wearing a small red hat
+
+A total of six images were generated.
+
+### Results
+
+**Scene Editing**
+
+Both embeddings successfully generated beach environments.
+
+However, several distinctive features of the original cat toy,
+including its colorful vertical stripes and curved tail,
+were not consistently preserved.
+
+**Style Editing**
+
+Both embeddings produced recognizable watercolor-style images.
+
+The learned concept was partially preserved, although facial
+features and object structure differed from the reference images.
+
+**Attribute Editing**
+
+Neither embedding clearly satisfied the instruction to place
+a small red hat on the cat toy.
+
+The lower-learning-rate result contained a red accessory,
+but its relationship to the requested hat was ambiguous.
+
+### Discussion
+
+The results suggest that the learned embeddings can respond
+to some scene and style modifications.
+
+Attribute editing was less successful in the tested examples.
+
+No consistent overall advantage of either learning rate
+was established from these six images.
+
+### Limitations
+
+The evaluation used only one random seed and three prompts.
+Additional prompts and seeds are required for more reliable conclusions.
+
+### Status
+
+Completed.
 
 ---
 
@@ -251,3 +301,40 @@ The initial experiments demonstrate that the learned embedding can reproduce sev
 A preliminary comparison across two learning rates and six training checkpoints has been completed.
 
 Further evaluation is required to determine how learning rate and training duration affect the tradeoff between concept fidelity and editability.
+
+## Experiment 06: CLIP Image Similarity Evaluation
+
+### Objective
+Quantitatively compare the visual similarity between generated images
+and the six reference images using CLIP image embeddings.
+
+### Setup
+- Model: openai/clip-vit-base-patch32
+- Reference images: 6
+- Generated images: 6
+- Training checkpoint: 3000 steps
+- Effective learning rates: 0.002 and 0.0004
+- Prompts: Beach, Red hat, Watercolor
+- Metric: Mean cosine similarity between each generated image embedding
+  and the six reference image embeddings.
+
+### Results
+
+| Prompt | LR = 0.0004 | LR = 0.002 |
+|---|---:|---:|
+| Beach | 0.6882 | 0.7686 |
+| Red hat | 0.7459 | 0.7422 |
+| Watercolor | 0.7298 | 0.7045 |
+| Average | 0.7213 | 0.7384 |
+
+### Observations
+The higher learning rate achieved a slightly higher average CLIP image
+similarity across the three prompts. However, the lower learning rate
+performed better on the Red hat and Watercolor prompts.
+
+### Limitations
+CLIP image similarity measures visual feature similarity rather than
+prompt adherence or overall generation quality. Only one inference seed
+was evaluated, and the two training runs did not use a controlled
+common training seed. Therefore, these results are exploratory and do
+not establish that either learning rate is generally superior.
